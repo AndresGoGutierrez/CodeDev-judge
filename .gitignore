@@ -1,0 +1,5 @@
+# Entornos virtuales
+.env
+
+# Archivos compilados
+**/__pycache__/
