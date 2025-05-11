@@ -1,21 +1,15 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
-from src.core.db_postgres import get_db
-
-from src.models.problemModel import Problem
-from src.models.testcaseModel import TestCase
 from sqlalchemy import exc
 
-
-
-# Importar dependencias
 from src.core.db_postgres import get_db
-
+from src.models.problemModel import Problem
+from src.models.testcaseModel import TestCase
 from src.schemas import problem as schemas
+from src.core.auth import is_authenticated, is_admin, is_moderator
 
 router = APIRouter()
-
 
 @router.get("/", response_model=List[schemas.ProblemPublic])
 def get_problems(
@@ -56,19 +50,20 @@ def get_problem(problem_id: int = Path(..., description="ID del problema"), db: 
     
     return problem
 
-@router.post("/", response_model=schemas.Problem)
+@router.post("/", response_model=schemas.Problem, dependencies=[Depends(is_moderator)])
 def create_problem(problem: schemas.ProblemCreate, db: Session = Depends(get_db)):
     """
     Crear un nuevo problema con sus casos de prueba.
+    Requiere rol de moderador o admin.
     """
     # Crear el problema
     db_problem = Problem(
         title=problem.title,
         description=problem.description,
-        inputFormat=problem.inputFormat,  # Añadido
-        outputFormat=problem.outputFormat,  # Añadido
-        constraints=problem.constraints,  # Añadido
-        tags=problem.tags,  # Añadido
+        inputFormat=problem.inputFormat,
+        outputFormat=problem.outputFormat,
+        constraints=problem.constraints,
+        tags=problem.tags,
         difficulty=problem.difficulty,
         time_limit=problem.time_limit,
         memory_limit=problem.memory_limit,
@@ -95,7 +90,7 @@ def create_problem(problem: schemas.ProblemCreate, db: Session = Depends(get_db)
     
     return db_problem
 
-@router.put("/{problem_id}", response_model=schemas.Problem)
+@router.put("/{problem_id}", response_model=schemas.Problem, dependencies=[Depends(is_admin)])
 def update_problem(
     problem_update: schemas.ProblemUpdate,
     problem_id: int = Path(..., description="ID del problema"),
@@ -103,6 +98,7 @@ def update_problem(
 ):
     """
     Actualizar un problema existente.
+    Requiere rol de admin.
     """
     db_problem = db.query(Problem).filter(Problem.id_problem == problem_id).first()
     
@@ -119,13 +115,14 @@ def update_problem(
     
     return db_problem
 
-@router.delete("/{problem_id}", response_model=dict)
+@router.delete("/{problem_id}", response_model=dict, dependencies=[Depends(is_admin)])
 def delete_problem(
     problem_id: int = Path(..., description="ID del problema"),
     db: Session = Depends(get_db)
 ):
     """
     Eliminar un problema y sus casos de prueba.
+    Requiere rol de admin.
     """
     db_problem = db.query(Problem).filter(Problem.id_problem == problem_id).first()
     
@@ -138,7 +135,7 @@ def delete_problem(
     
     return {"message": "Problema eliminado correctamente"}
 
-@router.post("/{problem_id}/test-cases", response_model=schemas.TestCase)
+@router.post("/{problem_id}/test-cases", response_model=schemas.TestCase, dependencies=[Depends(is_moderator)])
 def add_test_case(
     test_case: schemas.TestCaseCreate,
     problem_id: int = Path(..., description="ID del problema"),
@@ -146,6 +143,7 @@ def add_test_case(
 ):
     """
     Añadir un nuevo caso de prueba a un problema existente.
+    Requiere rol de moderador o admin.
     """
     # Verificar que el problema existe
     problem = db.query(Problem).filter(Problem.id_problem == problem_id).first()
@@ -173,7 +171,7 @@ def add_test_case(
         db.rollback()  # Revertir cualquier cambio si ocurre un error
         raise HTTPException(status_code=500, detail=f"Error al crear el test case: {str(e)}")
 
-@router.get("/{problem_id}/test-cases", response_model=List[schemas.TestCase])  # Cambiado a TestCaseSchema
+@router.get("/{problem_id}/test-cases", response_model=List[schemas.TestCase], dependencies=[Depends(is_authenticated)])
 def get_test_cases(
     problem_id: int = Path(..., description="ID del problema"),
     only_samples: bool = False,
@@ -182,6 +180,7 @@ def get_test_cases(
     """
     Obtener todos los casos de prueba de un problema.
     Opcionalmente filtrar solo por casos de ejemplo.
+    Requiere autenticación.
     """
     # Verificar que el problema existe
     problem = db.query(Problem).filter(Problem.id_problem == problem_id).first()
@@ -204,7 +203,7 @@ def get_test_cases(
         # Manejo de errores en la consulta
         raise HTTPException(status_code=500, detail=f"Error al obtener los casos de prueba: {str(e)}")
 
-@router.delete("/{problem_id}/test-cases/{test_case_id}", response_model=dict)
+@router.delete("/{problem_id}/test-cases/{test_case_id}", response_model=dict, dependencies=[Depends(is_admin)])
 def delete_test_case(
     problem_id: int = Path(..., description="ID del problema"),
     test_case_id: int = Path(..., description="ID del caso de prueba"),
@@ -212,6 +211,7 @@ def delete_test_case(
 ):
     """
     Eliminar un caso de prueba específico.
+    Requiere rol de admin.
     """
     # Verificar que el caso de prueba existe y pertenece al problema
     test_case = db.query(TestCase).filter(

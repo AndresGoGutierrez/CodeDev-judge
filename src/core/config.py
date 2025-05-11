@@ -18,6 +18,9 @@ class Settings(BaseModel):
     JUDGE0_URL: str = "http://192.168.56.101:2358"
     JUDGE0_AUTH_TOKEN: str = ""
 
+    AUTH_SERVICE_URL: str = "http://localhost:4000"
+
+
     # RabbitMQ o similar para comunicación entre microservicios
     MESSAGE_BROKER_URL: str = "amqp://guest:guest@rabbitmq:5672//"
 

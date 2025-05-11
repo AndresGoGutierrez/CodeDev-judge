@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api import routeproblem, routesubmission
+
 from src.core.config import settings
+from src.middleware.auth_middleware import verify_token_middleware
+
+from src.api import routeproblem, routesubmission
+from src.api.routeuser import router as user_router
 from src.core.db_postgres import engine
 from src.models.baseModel import Base
 
@@ -23,8 +27,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Registramos el middleware de autenticación en todas las peticiones HTTP
+app.middleware("http")(verify_token_middleware)
+
 # Incluir routers
 app.include_router(routeproblem.router, prefix="/api/problems", tags=["problems"])
+app.include_router(user_router, prefix="/api/users", tags=["users"])
 app.include_router(routesubmission.router, prefix="/api/submissions", tags=["submissions"])
 
 @app.get("/", tags=["root"])
