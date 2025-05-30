@@ -12,24 +12,24 @@ class TestCaseCreate(TestCaseBase):
     pass
 
 class TestCase(TestCaseBase):
-    id_test: int  # Añadido el campo id_test que faltaba
-    problem_id: int  # Mantener solo problem_id, eliminar id_problem
-
+    id_test: int
+    problem_id: int
+    
     class Config:
         orm_mode = True
 
 class ProblemBase(BaseModel):
     title: str
     description: str
-    inputFormat: Optional[str] = None
-    outputFormat: Optional[str] = None
-    constraints: Optional[str] = None
+    inputFormat: str = Field(..., description="Formato de entrada requerido")
+    outputFormat: str = Field(..., description="Formato de salida requerido") 
+    constraints: str = Field(..., description="Restricciones del problema")
     difficulty: str = Field(..., description="Dificultad: easy, medium, hard")
     time_limit: float = Field(1.0, description="Tiempo límite en segundos")
     memory_limit: int = Field(256, description="Memoria límite en MB")
     is_public: bool = True
     external_id: Optional[str] = None
-    tags: Optional[str] = None
+    tags: str = Field(..., description="Etiquetas separadas por comas")
 
 class ProblemCreate(ProblemBase):
     test_cases: List[TestCaseCreate]
@@ -52,7 +52,7 @@ class Problem(ProblemBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     test_cases: List[TestCase] = []
-
+    
     class Config:
         orm_mode = True
 
@@ -61,9 +61,13 @@ class ProblemPublic(BaseModel):
     title: str
     description: str
     difficulty: str
+    tags: str
+    inputFormat: str
+    outputFormat: str
+    constraints: str
     time_limit: float
     memory_limit: int
-    sample_test_cases: List[TestCase] = []
-
+    test_cases: List[TestCase] = []
+    
     class Config:
         orm_mode = True

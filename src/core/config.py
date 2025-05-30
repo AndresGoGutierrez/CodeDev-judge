@@ -9,7 +9,7 @@ class Settings(BaseModel):
     API_V1_STR: str = "/api"
 
     # CORS
-    CORS_ORIGINS: List[str] = Field(default=["*"])
+    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     # Base de datos
     DATABASE_URL: str = "sqlite:///./judge.db"
@@ -18,6 +18,8 @@ class Settings(BaseModel):
     JUDGE0_URL: str = "http://192.168.56.101:2358"
     JUDGE0_AUTH_TOKEN: str = ""
 
+
+    # Servicio de autenticación
     AUTH_SERVICE_URL: str = "http://localhost:4000"
 
 
