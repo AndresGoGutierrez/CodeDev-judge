@@ -22,12 +22,12 @@ async def get_all_submissions(
     _: dict = Depends(is_admin)
 ):
     """
-    Obtener todos los envíos con filtros opcionales.
-    Solo accesible para administradores.
+    Retrieve all submissions with optional filters.
+    Accessible only to administrators.
     """
     query = db.query(Submission)
     
-    # Aplicar filtros
+    # Apply filters
     if user_id:
         query = query.filter(Submission.user_id == user_id)
     
@@ -37,7 +37,7 @@ async def get_all_submissions(
     if status:
         query = query.filter(Submission.status_submission == status)
     
-    # Ordenar por fecha de creación descendente (más recientes primero)
+    # Sort by creation date descending (most recent first)
     query = query.order_by(Submission.created_at.desc())
     
     submissions = query.offset(skip).limit(limit).all()
@@ -45,48 +45,48 @@ async def get_all_submissions(
 
 @router.get("/{submission_id}", response_model=schemas.Submission)
 async def get_submission_detail(
-    submission_id: int = Path(..., description="ID del envío"),
+    submission_id: int = Path(..., description="Submission ID"),
     db: Session = Depends(get_db),
     _: dict = Depends(is_admin)
 ):
     """
-    Obtener detalles completos de un envío específico.
-    Solo accesible para administradores.
+    Retrieve full details of a specific submission.
+    Accessible only to administrators.
     """
     submission = db.query(Submission).filter(Submission.id_submission == submission_id).first()
     
     if not submission:
-        raise HTTPException(status_code=404, detail="Envío no encontrado")
+        raise HTTPException(status_code=404, detail="Submission not found")
     
     return submission
 
 @router.post("/{submission_id}/reprocess", response_model=schemas.SubmissionPublic)
 async def reprocess_submission(
     background_tasks: BackgroundTasks,
-    submission_id: int = Path(..., description="ID del envío"),
+    submission_id: int = Path(..., description="Submission ID"),
     db: Session = Depends(get_db),
     _: dict = Depends(is_admin)
 ):
     """
-    Reprocesar un envío existente.
-    Solo accesible para administradores.
+    Reprocess an existing submission.
+    Accessible only to administrators.
     """
-    # Verificar que el envío existe
+    # Verify that the submission exists
     submission = db.query(Submission).filter(Submission.id_submission == submission_id).first()
     if not submission:
-        raise HTTPException(status_code=404, detail="Envío no encontrado")
+        raise HTTPException(status_code=404, detail="Submission not found")
     
-    # Eliminar resultados anteriores
+    # Delete previous results
     db.query(TestResult).filter(TestResult.submission_id == submission_id).delete()
     
-    # Actualizar estado a pendiente
+    # Update status to pending
     submission.status_submission = "PENDING"
     submission.execution_time = None
     submission.memory_used = None
     db.commit()
     db.refresh(submission)
     
-    # Procesar el envío en segundo plano
+    # Process the submission in the background
     background_tasks.add_task(
         process_submission, 
         submission_id=submission.id_submission,
@@ -97,24 +97,24 @@ async def reprocess_submission(
 
 @router.delete("/{submission_id}", response_model=dict)
 async def delete_submission(
-    submission_id: int = Path(..., description="ID del envío"),
+    submission_id: int = Path(..., description="Submission ID"),
     db: Session = Depends(get_db),
     _: dict = Depends(is_admin)
 ):
     """
-    Eliminar un envío específico.
-    Solo accesible para administradores.
+    Delete a specific submission.
+    Accessible only to administrators.
     """
-    # Verificar que el envío existe
+    # Verify that the submission exists
     submission = db.query(Submission).filter(Submission.id_submission == submission_id).first()
     if not submission:
-        raise HTTPException(status_code=404, detail="Envío no encontrado")
+        raise HTTPException(status_code=404, detail="Submission not found")
     
-    # Eliminar resultados asociados
+    # Delete associated test results
     db.query(TestResult).filter(TestResult.submission_id == submission_id).delete()
     
-    # Eliminar el envío
+    # Delete the submission
     db.delete(submission)
     db.commit()
     
-    return {"message": "Envío eliminado correctamente"}
+    return {"message": "Submission successfully deleted"}

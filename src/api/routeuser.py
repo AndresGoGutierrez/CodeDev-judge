@@ -6,13 +6,13 @@ router = APIRouter()
 @router.get("/me-debug", tags=["users"])
 async def debug_current_user(request: Request):
     """
-    Devuelve TODO lo que hay en request.state.user para depurar.
+    Returns EVERYTHING in request.state.user for debugging.
     """
-    # Obtener todos los atributos de request.state
+    # Get all attributes from request.state
     state_attrs = {attr: getattr(request.state, attr) for attr in dir(request.state) 
                   if not attr.startswith('_') and not callable(getattr(request.state, attr))}
     
-    # Obtener todos los headers de la petición
+    # Get all request headers
     headers = dict(request.headers.items())
     
     return {
@@ -26,7 +26,7 @@ async def debug_current_user(request: Request):
 @router.get("/me", tags=["users"])
 async def get_current_user(request: Request):
     """
-    Obtiene la información del usuario autenticado
+    Retrieves information about the authenticated user
     """
     user = getattr(request.state, "user", None)
     if not user:

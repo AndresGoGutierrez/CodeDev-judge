@@ -1,60 +1,60 @@
 from fastapi import Depends, HTTPException, status, Request
 from typing import List, Optional
 
-# Dependencia para verificar que el usuario está autenticado
+# Dependency to verify that the user is authenticated
 async def get_current_user(request: Request):
     """
-    Verifica que el usuario está autenticado y devuelve sus datos.
+    Verifies that the user is authenticated and returns their data.
     """
     user = getattr(request.state, "user", None)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No autenticado",
+            detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
 
-# Dependencia para verificar roles específicos
+# Dependency to verify specific roles
 def has_role(required_roles: List[str]):
     """
-    Crea una dependencia que verifica si el usuario tiene alguno de los roles requeridos.
+    Creates a dependency that checks if the user has any of the required roles.
     """
     async def role_checker(user = Depends(get_current_user)):
         user_roles = user.get("roles", [])
         
-        # Verificar si el usuario tiene alguno de los roles requeridos
+        # Check if the user has any of the required roles
         if not any(role in user_roles for role in required_roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"No tienes permiso para acceder a este recurso. Se requiere uno de estos roles: {required_roles}",
+                detail=f"You do not have permission to access this resource. One of the following roles is required: {required_roles}",
             )
         return user
     
     return role_checker
 
-# Dependencias específicas para roles comunes
+# Specific dependencies for common roles
 is_admin = has_role(["admin"])
-is_moderator = has_role(["moderator", "admin"])  # Los admin también pueden hacer lo que hacen los moderadores
-is_authenticated = get_current_user  # Cualquier usuario autenticado
+is_moderator = has_role(["moderator", "admin"])  # Admins can also do what moderators do
+is_authenticated = get_current_user  # Any authenticated user
 
-# Función para verificar si el usuario es propietario de un recurso
+# Function to verify if the user is the owner of a resource
 async def is_owner_or_admin(request: Request, resource_user_id: str):
     """
-    Verifica si el usuario es propietario del recurso o es administrador.
+    Checks if the user is the owner of the resource or an admin.
     """
     user = await get_current_user(request)
     user_roles = user.get("roles", [])
     
-    # Si es admin, permitir acceso
+    # If admin, allow access
     if "admin" in user_roles:
         return True
     
-    # Si es el propietario, permitir acceso
+    # If the owner, allow access
     if user.get("id") == resource_user_id:
         return True
     
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="No tienes permiso para acceder a este recurso",
+        detail="You do not have permission to access this resource",
     )

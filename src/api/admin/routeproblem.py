@@ -18,26 +18,26 @@ async def get_all_problems(
     _: dict = Depends(is_admin)
 ):
     """
-    Obtener todos los problemas (incluyendo no públicos).
-    Solo accesible para administradores.
+    Get all problems (including non-public ones).
+    Accessible only to administrators.
     """
     problems = db.query(Problem).offset(skip).limit(limit).all()
     return problems
 
 @router.get("/{problem_id}", response_model=schemas.Problem)
 async def get_problem_detail(
-    problem_id: int = Path(..., description="ID del problema"),
+    problem_id: int = Path(..., description="Problem ID"),
     db: Session = Depends(get_db),
     _: dict = Depends(is_admin)
 ):
     """
-    Obtener detalles completos de un problema específico.
-    Solo accesible para administradores.
+    Get full details of a specific problem.
+    Accessible only to administrators.
     """
     problem = db.query(Problem).filter(Problem.id_problem == problem_id).first()
     
     if not problem:
-        raise HTTPException(status_code=404, detail="Problema no encontrado")
+        raise HTTPException(status_code=404, detail="Problem not found")
     
     return problem
 
@@ -48,10 +48,10 @@ async def create_problem(
     _: dict = Depends(is_admin)
 ):
     """
-    Crear un nuevo problema con sus casos de prueba.
-    Solo accesible para administradores.
+    Create a new problem with its test cases.
+    Accessible only to administrators.
     """
-    # Crear el problema
+    # Create the problem
     db_problem = Problem(
         title=problem.title,
         description=problem.description,
@@ -69,7 +69,7 @@ async def create_problem(
     db.commit()
     db.refresh(db_problem)
     
-    # Crear los casos de prueba
+    # Create the test cases
     for test_case in problem.test_cases:
         db_test_case = TestCase(
             problem_id=db_problem.id_problem,
@@ -88,20 +88,20 @@ async def create_problem(
 @router.put("/{problem_id}", response_model=schemas.Problem)
 async def update_problem(
     problem_update: schemas.ProblemUpdate,
-    problem_id: int = Path(..., description="ID del problema"),
+    problem_id: int = Path(..., description="Problem ID"),
     db: Session = Depends(get_db),
     _: dict = Depends(is_admin)
 ):
     """
-    Actualizar un problema existente.
-    Solo accesible para administradores.
+    Update an existing problem.
+    Accessible only to administrators.
     """
     db_problem = db.query(Problem).filter(Problem.id_problem == problem_id).first()
     
     if not db_problem:
-        raise HTTPException(status_code=404, detail="Problema no encontrado")
+        raise HTTPException(status_code=404, detail="Problem not found")
     
-    # Actualizar los campos proporcionados
+    # Update the provided fields
     update_data = problem_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_problem, key, value)
@@ -113,43 +113,43 @@ async def update_problem(
 
 @router.delete("/{problem_id}", response_model=dict)
 async def delete_problem(
-    problem_id: int = Path(..., description="ID del problema"),
+    problem_id: int = Path(..., description="Problem ID"),
     db: Session = Depends(get_db),
     _: dict = Depends(is_admin)
 ):
     """
-    Eliminar un problema y sus casos de prueba.
-    Solo accesible para administradores.
+    Delete a problem and its test cases.
+    Accessible only to administrators.
     """
     db_problem = db.query(Problem).filter(Problem.id_problem == problem_id).first()
     
     if not db_problem:
-        raise HTTPException(status_code=404, detail="Problema no encontrado")
+        raise HTTPException(status_code=404, detail="Problem not found")
     
-    # Eliminar el problema (los casos de prueba se eliminarán en cascada)
+    # Delete the problem (test cases will be deleted via cascade)
     db.delete(db_problem)
     db.commit()
     
-    return {"message": "Problema eliminado correctamente"}
+    return {"message": "Problem successfully deleted"}
 
 @router.post("/{problem_id}/testcases", response_model=schemas.TestCase)
 async def add_test_case(
     test_case: schemas.TestCaseCreate,
-    problem_id: int = Path(..., description="ID del problema"),
+    problem_id: int = Path(..., description="Problem ID"),
     db: Session = Depends(get_db),
     _: dict = Depends(is_admin)
 ):
     """
-    Añadir un nuevo caso de prueba a un problema existente.
-    Solo accesible para administradores.
+    Add a new test case to an existing problem.
+    Accessible only to administrators.
     """
-    # Verificar que el problema existe
+    # Check if the problem exists
     problem = db.query(Problem).filter(Problem.id_problem == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=404, detail="Problema no encontrado")
+        raise HTTPException(status_code=404, detail="Problem not found")
     
     try:
-        # Crear el caso de prueba
+        # Create the test case
         db_test_case = TestCase(
             problem_id=problem_id,
             input_data=test_case.input_data,
@@ -165,32 +165,32 @@ async def add_test_case(
         return db_test_case
     
     except Exception as e:
-        # Manejo de errores de base de datos
-        db.rollback()  # Revertir cualquier cambio si ocurre un error
-        raise HTTPException(status_code=500, detail=f"Error al crear el test case: {str(e)}")
+        # Handle database errors
+        db.rollback()  # Roll back any changes if an error occurs
+        raise HTTPException(status_code=500, detail=f"Error creating the test case: {str(e)}")
 
 @router.delete("/{problem_id}/testcases/{test_case_id}", response_model=dict)
 async def delete_test_case(
-    problem_id: int = Path(..., description="ID del problema"),
-    test_case_id: int = Path(..., description="ID del caso de prueba"),
+    problem_id: int = Path(..., description="Problem ID"),
+    test_case_id: int = Path(..., description="Test case ID"),
     db: Session = Depends(get_db),
     _: dict = Depends(is_admin)
 ):
     """
-    Eliminar un caso de prueba específico.
-    Solo accesible para administradores.
+    Delete a specific test case.
+    Accessible only to administrators.
     """
-    # Verificar que el caso de prueba existe y pertenece al problema
+    # Check if the test case exists and belongs to the problem
     test_case = db.query(TestCase).filter(
         TestCase.id_test == test_case_id,
         TestCase.problem_id == problem_id
     ).first()
     
     if not test_case:
-        raise HTTPException(status_code=404, detail="Caso de prueba no encontrado")
+        raise HTTPException(status_code=404, detail="Test case not found")
     
-    # Eliminar el caso de prueba
+    # Delete the test case
     db.delete(test_case)
     db.commit()
     
-    return {"message": "Caso de prueba eliminado correctamente"}
+    return {"message": "Test case successfully deleted"}

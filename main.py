@@ -13,16 +13,16 @@ from src.api.admin import routesubmission as admin_routesubmission
 from src.core.db_postgres import engine
 from src.models.baseModel import Base
 
-# Crear tablas en la base de datos
+# Create tables in the database
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Judge Microservice",
-    description="Microservicio para evaluación de código usando Judge0",
+    description="Microservice for code evaluation using Judge0",
     version="1.0.0"
 )
 
-# Configurar CORS - Actualizado para incluir explícitamente el origen del frontend
+# Configure CORS - Updated to explicitly include frontend origin
 origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 if hasattr(settings, 'CORS_ORIGINS'):
     if isinstance(settings.CORS_ORIGINS, list):
@@ -30,29 +30,29 @@ if hasattr(settings, 'CORS_ORIGINS'):
     else:
         origins.append(settings.CORS_ORIGINS)
 
-# IMPORTANTE: Mover el middleware CORS antes del middleware de autenticación
+# IMPORTANT: Move CORS middleware before the authentication middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Lista actualizada de orígenes permitidos
+    allow_origins=origins,  # Updated list of allowed origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],  # Exponer todos los encabezados en la respuesta
+    expose_headers=["*"],  # Expose all headers in the response
 )
 
-# Incluir routers
+# Include routers
 app.include_router(routeproblem.router, prefix="/api/problems", tags=["problems"])
 app.include_router(user_router, prefix="/api/users", tags=["users"])
 app.include_router(routesubmission.router, prefix="/api/submissions", tags=["submissions"])
-app.include_router(language_router, prefix="/api/languages", tags=["languages"])  # Añadir el nuevo router
+app.include_router(language_router, prefix="/api/languages", tags=["languages"])  # Add the new router
 
-# Incluir routers de administración
+# Include admin routers
 app.include_router(admin_routeuser.router, tags=["admin", "users"])
 app.include_router(admin_routeproblem.router, tags=["admin", "problems"])
 app.include_router(admin_routesubmission.router, tags=["admin", "submissions"])
 
-# Registramos el middleware de autenticación en todas las peticiones HTTP
-# IMPORTANTE: Mover esto después de la configuración CORS
+# Register authentication middleware on all HTTP requests
+# IMPORTANT: Move this after CORS configuration
 app.middleware("http")(verify_token_middleware)
 
 

@@ -6,21 +6,21 @@ import json
 
 from src.core.config import settings
 
-# Configurar logging
+# Configure logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # Cambiar a DEBUG para más información
+logger.setLevel(logging.DEBUG)  # Change to DEBUG for more information
 
-# Rutas que no requieren autenticación
+# Paths that do not require authentication
 PUBLIC_PATHS = [
     "/",              # FastAPI root
     "/health",        # Health check
-    "/api/auth/signin",     # Cualquier ruta de auth en Node.js
-    "/api/auth/signup",     # Cualquier ruta de auth en Node.js
+    "/api/auth/signin",     # Any auth route in Node.js
+    "/api/auth/signup",     # Any auth route in Node.js
     "/api/languages",
     "/docs",          # Swagger UI
     "/openapi.json",   # OpenAPI spec
-    "/api/auth/mock-verify",  # Endpoint de prueba
-    "/api/auth/generate-test-token"  # Endpoint de prueba
+    "/api/auth/mock-verify",  # Test endpoint
+    "/api/auth/generate-test-token"  # Test endpoint
 ]
 
 async def verify_token_middleware(request: Request, call_next):
@@ -29,30 +29,30 @@ async def verify_token_middleware(request: Request, call_next):
     logger.debug(f"Request method: {request.method}")
     logger.debug(f"Request headers: {dict(request.headers)}")
 
-    # Permitir solicitudes OPTIONS para CORS preflight
+    # Allow OPTIONS requests for CORS preflight
     if request.method == "OPTIONS":
-        logger.debug("Permitiendo solicitud OPTIONS para CORS preflight")
+        logger.debug("Allowing OPTIONS request for CORS preflight")
         response = await call_next(request)
         return response
 
-    # Verificar si la ruta es pública (debe coincidir exactamente o ser un prefijo específico)
+    # Check if the path is public (must exactly match or be a specific prefix)
     is_public = False
     for public_path in PUBLIC_PATHS:
-        # Coincidencia exacta
+        # Exact match
         if path == public_path:
             is_public = True
             break
-        # Coincidencia de prefijo para documentación
+        # Prefix match for documentation
         if public_path in ["/docs", "/openapi.json"] and path.startswith(public_path):
             is_public = True
             break
-        # Coincidencia para archivos estáticos
+        # Match for static files
         if path.startswith("/static/"):
             is_public = True
             break
-        # Rutas públicas de problemas
+        # Public paths for problems
         if path == "/api/problems" or (path.startswith("/api/problems/") and request.method == "GET"):
-            # Solo las solicitudes GET a problemas son públicas
+            # Only GET requests to problems are public
             is_public = True
             break
 
@@ -60,7 +60,7 @@ async def verify_token_middleware(request: Request, call_next):
         logger.debug(f"Public path detected: {path}")
         return await call_next(request)
 
-    # Verificar token de autenticación
+    # Verify authentication token
     auth_header = request.headers.get("Authorization")
     x_access_token = request.headers.get("x-access-token")
     
@@ -73,16 +73,16 @@ async def verify_token_middleware(request: Request, call_next):
         logger.debug(f"Token extracted from x-access-token header, length: {len(token)}")
     
     if not token:
-        logger.warning("No se proporcionó token de autenticación")
+        logger.warning("No authentication token provided")
         return JSONResponse(
             status_code=401,
-            content={"detail": "No se proporcionó token de autenticación"}
+            content={"detail": "No authentication token provided"}
         )
 
-    # Guardar el token en request.state para usarlo en las rutas
+    # Store the token in request.state to use it in routes
     request.state.user_token = token
 
-    # Llamar al servicio Node.js para verificar token
+    # Call Node.js service to verify token
     try:
         logger.debug(f"Calling auth service at: {settings.AUTH_SERVICE_URL}/api/auth/verify")
         resp = requests.post(
@@ -105,13 +105,13 @@ async def verify_token_middleware(request: Request, call_next):
         logger.warning(f"Invalid token response from auth service: {resp.status_code}")
         return JSONResponse(status_code=401, content={"message": "Invalid or expired token"})
 
-    # Inyectamos la info del usuario en request.state
+    # Inject user info into request.state
     try:
         user_data = resp.json()
         logger.debug(f"User data received: {json.dumps(user_data)}")
         request.state.user = user_data
         
-        # Verificar si el usuario tiene rol de administrador
+        # Check if the user has administrator role
         is_admin = False
         if "roles" in user_data and isinstance(user_data["roles"], list):
             is_admin = "admin" in user_data["roles"]
@@ -127,6 +127,6 @@ async def verify_token_middleware(request: Request, call_next):
         logger.error(f"Error processing user data: {str(e)}")
         return JSONResponse(status_code=500, content={"message": f"Error processing user data: {str(e)}"})
 
-    # Continuar con la petición
+    # Continue with the request
     response = await call_next(request)
     return response

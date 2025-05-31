@@ -15,38 +15,38 @@ import json
 
 async def process_submission(submission_id: int, db: Session) -> Submission:
     """
-    Procesa un envío, ejecutando el código contra todos los casos de prueba.
+    Processes a submission, running the code against all test cases.
     """
-    # Obtener el envío
+    # Get the submission
     submission = db.query(Submission).filter(Submission.id_submission == submission_id).first()
     if not submission:
-        raise ValueError(f"Envío {submission_id} no encontrado")
+        raise ValueError(f"Submission {submission_id} not found")
     
-    # Actualizar estado a "processing"
+    # Update status to "processing"
     submission.status = SubmissionStatus.PROCESSING
     db.commit()
     
     try:
-        # Obtener el problema y sus casos de prueba
+        # Get the problem and its test cases
         problem = db.query(Problem).filter(Problem.id_problem == submission.problem_id).first()
         if not problem:
-            raise ValueError(f"Problema {submission.problem_id} no encontrado")
+            raise ValueError(f"Problem {submission.problem_id} not found")
         
         test_cases = db.query(TestCase).filter(
             TestCase.problem_id == problem.id_problem
         ).order_by(TestCase.order).all()
         
         if not test_cases:
-            raise ValueError(f"No hay casos de prueba para el problema {problem.id}")
+            raise ValueError(f"No test cases found for problem {problem.id}")
         
-        # Obtener el ID del lenguaje para Judge0
+        # Get the language ID for Judge0
         language_id = settings.LANGUAGE_MAP.get(submission.language_id)
         if not language_id:
-            raise ValueError(f"Lenguaje no soportado: {submission.language_id}")
+            raise ValueError(f"Unsupported language: {submission.language_id}")
         
         JUDGE0_MAX_MEMORY_KB = 512000
         
-        # Preparar envíos para Judge0 (uno por cada caso de prueba)
+        # Prepare submissions for Judge0 (one per test case)
         judge0_submissions = []
         for test_case in test_cases:
             judge0_sub = Judge0Submission(
@@ -55,26 +55,26 @@ async def process_submission(submission_id: int, db: Session) -> Submission:
                 stdin=test_case.input_data,
                 expected_output=test_case.expected_output,
                 cpu_time_limit=problem.time_limit,
-                memory_limit=min(problem.memory_limit * 1024, JUDGE0_MAX_MEMORY_KB),  # Convertir MB a KB
+                memory_limit=min(problem.memory_limit * 1024, JUDGE0_MAX_MEMORY_KB),  # Convert MB to KB
                 max_processes_and_or_threads=60,
                 enable_per_process_and_thread_time_limit=True,
                 enable_per_process_and_thread_memory_limit=True
             )
             judge0_submissions.append((test_case.id_test, judge0_sub))
         
-        # Enviar todos los casos de prueba a Judge0
+        # Submit all test cases to Judge0
         responses = await judge0_client.batch_submit([sub for _, sub in judge0_submissions])
         
-        # Mapear tokens a casos de prueba
+        # Map tokens to test cases
         token_to_test_case = {}
         for i, (test_case_id, _) in enumerate(judge0_submissions):
             token_to_test_case[responses[i].token] = test_case_id
         
-        # Esperar y obtener todos los resultados
+        # Wait for and get all results
         tokens = [resp.token for resp in responses]
         results = await wait_for_all_results(tokens)
         
-        # Procesar resultados
+        # Process results
         all_passed = True
         max_time = 0
         max_memory = 0
@@ -82,19 +82,19 @@ async def process_submission(submission_id: int, db: Session) -> Submission:
         for token, result in results.items():
             test_case_id = token_to_test_case[token]
             
-            # Determinar el estado del resultado
+            # Determine the result status
             status = map_judge0_status_to_submission_status(result.status["id"])
             
             if status != SubmissionStatus.ACCEPTED:
                 all_passed = False
             
-            # Actualizar estadísticas
+            # Update statistics
             if result.time and result.time > max_time:
                 max_time = result.time
             if result.memory and result.memory > max_memory:
                 max_memory = result.memory
             
-            # Guardar el resultado de este caso de prueba
+            # Save the result for this test case
             test_result = TestResult(
                 submission_id=submission.id_submission,
                 test_case_id=test_case_id,
@@ -109,7 +109,7 @@ async def process_submission(submission_id: int, db: Session) -> Submission:
             )
             db.add(test_result)
         
-        # Actualizar el estado final del envío
+        # Update the final status of the submission
         submission.status_submission = SubmissionStatus.ACCEPTED if all_passed else SubmissionStatus.WRONG_ANSWER
         submission.execution_time = max_time
         submission.memory_used = max_memory
@@ -120,7 +120,7 @@ async def process_submission(submission_id: int, db: Session) -> Submission:
         return submission
     
     except Exception as e:
-        # En caso de error, actualizar el estado del envío
+        # In case of error, update the submission status
         submission.status_submission = SubmissionStatus.SYSTEM_ERROR
         db.commit()
         raise e
@@ -128,7 +128,7 @@ async def process_submission(submission_id: int, db: Session) -> Submission:
 
 async def wait_for_all_results(tokens: List[str], max_attempts: int = 20, initial_delay: float = 0.5) -> Dict[str, Any]:
     """
-    Espera y consulta periódicamente hasta obtener todos los resultados.
+    Waits and polls periodically until all results are obtained.
     """
     results = {}
     pending_tokens = set(tokens)
@@ -138,27 +138,27 @@ async def wait_for_all_results(tokens: List[str], max_attempts: int = 20, initia
         if not pending_tokens:
             break
         
-        # Consultar resultados pendientes
+        # Query pending results
         batch_results = await judge0_client.batch_get_results(list(pending_tokens))
         
-        # Procesar resultados
+        # Process results
         for result in batch_results:
-            # Si el resultado está completo, guardarlo
-            if result.status["id"] >= 3:  # 3 o mayor significa que ya no está en cola o procesando
+            # If the result is complete, save it
+            if result.status["id"] >= 3:  # 3 or higher means no longer queued or processing
                 results[result.token] = result
                 pending_tokens.remove(result.token)
         
-        # Si aún quedan pendientes, esperar antes de consultar de nuevo
+        # If there are still pending, wait before querying again
         if pending_tokens:
             await asyncio.sleep(delay)
-            delay = min(delay * 1.5, 5.0)  # Aumentar el tiempo de espera gradualmente, máximo 5 segundos
+            delay = min(delay * 1.5, 5.0)  # Gradually increase wait time, max 5 seconds
     
-    # Si aún quedan tokens pendientes, marcarlos como error
+    # If there are still pending tokens, mark them as error
     if pending_tokens:
         for token in pending_tokens:
             results[token] = {
                 "token": token,
-                "status": {"id": 13, "description": "Internal Error"},  # 13 es Internal Error en Judge0
+                "status": {"id": 13, "description": "Internal Error"},  # 13 is Internal Error in Judge0
                 "time": None,
                 "memory": None
             }
@@ -167,7 +167,7 @@ async def wait_for_all_results(tokens: List[str], max_attempts: int = 20, initia
 
 def map_judge0_status_to_submission_status(judge0_status_id: int) -> SubmissionStatus:
     """
-    Mapea los códigos de estado de Judge0 a nuestros estados de envío.
+    Maps Judge0 status codes to our submission statuses.
     
     Judge0 status codes:
     1 - In Queue, 2 - Processing,

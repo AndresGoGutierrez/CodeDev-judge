@@ -1,36 +1,32 @@
 from typing import List, Dict
 from pydantic import BaseModel, Field, validator
 import os
-
-
 class Settings(BaseModel):
-    # Información del proyecto
+    # Project information
     PROJECT_NAME: str = "Judge Microservice"
     API_V1_STR: str = "/api"
 
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
-    # Base de datos
+    # Database
     DATABASE_URL: str = "sqlite:///./judge.db"
 
     # Judge0
     JUDGE0_URL: str = "http://192.168.56.101:2358"
     JUDGE0_AUTH_TOKEN: str = ""
 
-
-    # Servicio de autenticación
+    # Authentication service
     AUTH_SERVICE_URL: str = "http://localhost:4000"
 
-
-    # RabbitMQ o similar para comunicación entre microservicios
+    # RabbitMQ or similar for microservices communication
     MESSAGE_BROKER_URL: str = "amqp://guest:guest@rabbitmq:5672//"
 
-    # Configuración del juez
+    # Judge configuration
     MAX_CODE_SIZE: int = 65536  # bytes
 
-    # Mapeo de lenguajes a IDs de Judge0
-    # Cambiado para usar IDs numéricos como claves
+    # Mapping from languages to Judge0 IDs
+    # Changed to use numeric IDs as keys
     LANGUAGE_MAP: Dict[int, int] = {
         1: 71,  # Python 3.8
         2: 54,  # C++ (GCC 9.2.0)
@@ -42,7 +38,6 @@ class Settings(BaseModel):
         8: 72,  # Ruby (2.7.0)
         9: 73,  # Rust (1.40.0)
 
-        
         71: 71,  # Python 3.8
         54: 54,  # C++ (GCC 9.2.0)
         62: 62,  # Java (OpenJDK 13.0.1)
@@ -54,7 +49,7 @@ class Settings(BaseModel):
         73: 73,  # Rust (1.40.0)
     }
 
-    # Mapeo inverso para referencia (nombre del lenguaje a ID interno)
+    # Reverse mapping for reference (language name to internal ID)
     LANGUAGE_NAME_TO_ID: Dict[str, int] = {
         "python": 1,
         "cpp": 2,
@@ -78,5 +73,5 @@ class Settings(BaseModel):
         env_file = ".env"
 
 
-# Instanciar las configuraciones
+# Instantiate settings
 settings = Settings()

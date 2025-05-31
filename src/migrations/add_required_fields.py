@@ -1,31 +1,31 @@
-# Script para actualizar registros existentes con valores None
+# Script to update existing records with None values
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker
 
-# Configurar tu conexión a la base de datos
+# Configure your database connection
 DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/db_juez-microservicio"
-print(f"Conectando a la base de datos:postgres@localhost:5432/db_juez-microservicio")  # Reemplaza con tu URL real
+print(f"Connecting to database:postgres@localhost:5432/db_juez-microservicio")  # Replace with your actual URL
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def inspect_table_structure():
-    """Inspeccionar la estructura de la tabla problems"""
-    print("🔍 Inspeccionando estructura de la tabla 'problems'...")
+    """Inspect the structure of the problems table"""
+    print("🔍 Inspecting structure of 'problems' table...")
     
     inspector = inspect(engine)
     
-    # Verificar si la tabla existe
+    # Check if the table exists
     tables = inspector.get_table_names()
-    print(f"Tablas disponibles: {tables}")
+    print(f"Available tables: {tables}")
     
     if 'problems' not in tables:
-        print("❌ La tabla 'problems' no existe!")
+        print("❌ The 'problems' table does not exist!")
         return None
     
-    # Obtener columnas de la tabla problems
+    # Get columns of the problems table
     columns = inspector.get_columns('problems')
     
-    print("\n📋 Columnas en la tabla 'problems':")
+    print("\n📋 Columns in the 'problems' table:")
     print("-" * 50)
     column_names = []
     for column in columns:
@@ -35,8 +35,8 @@ def inspect_table_structure():
     return column_names
 
 def find_matching_columns(column_names):
-    """Encontrar las columnas que corresponden a nuestros campos"""
-    # Posibles nombres para cada campo
+    """Find columns that correspond to our fields"""
+    # Possible names for each field
     field_mappings = {
         'input_format': ['inputFormat', 'input_format', 'inputformat'],
         'output_format': ['outputFormat', 'output_format', 'outputformat'], 
@@ -53,34 +53,34 @@ def find_matching_columns(column_names):
                 break
         
         if field not in found_columns:
-            print(f"⚠️  No se encontró columna para {field}")
+            print(f"⚠️  No column found for {field}")
     
-    print(f"\n✅ Columnas encontradas: {found_columns}")
+    print(f"\n✅ Found columns: {found_columns}")
     return found_columns
 
 def update_null_fields_dynamic(column_mapping):
-    """Actualizar campos NULL usando los nombres de columna correctos (con comillas)"""
+    """Update NULL fields using correct column names (with quotes)"""
     if not column_mapping:
-        print("❌ No se pueden actualizar campos: no se encontraron columnas válidas")
+        print("❌ Cannot update fields: no valid columns found")
         return
     
     db = SessionLocal()
     try:
-        print("🔄 Iniciando actualización de campos NULL...")
+        print("🔄 Starting NULL fields update...")
         
         set_clauses = []
         where_clauses = []
         
         field_defaults = {
-            'input_format': 'No especificado',
-            'output_format': 'No especificado', 
-            'constraints': 'No especificado',
-            'tags': 'Sin etiquetas'
+            'input_format': 'Not specified',
+            'output_format': 'Not specified', 
+            'constraints': 'Not specified',
+            'tags': 'No tags'
         }
         
         for field, column_name in column_mapping.items():
             default_value = field_defaults[field]
-            # envolver el nombre de columna entre comillas dobles
+            # wrap column name in double quotes
             col = f'"{column_name}"'
             set_clauses.append(f"{col} = COALESCE({col}, :{field}_default)")
             where_clauses.append(f"{col} IS NULL")
@@ -88,23 +88,23 @@ def update_null_fields_dynamic(column_mapping):
         where_condition = " OR ".join(where_clauses)
         set_condition   = ", ".join(set_clauses)
         
-        # preparar la consulta parametrizada
+        # prepare parameterized query
         update_query = text(f"""
             UPDATE problems
             SET {set_condition}
             WHERE {where_condition}
         """)
         
-        # asignar parámetros para los valores por defecto
+        # assign parameters for default values
         params = {f"{field}_default": default for field, default in field_defaults.items() if field in column_mapping}
         
         result = db.execute(update_query, params)
         db.commit()
         
-        print(f"✅ Se actualizaron {result.rowcount} registros")
+        print(f"✅ Updated {result.rowcount} records")
         
     except Exception as e:
-        print(f"❌ Error durante la actualización: {e}")
+        print(f"❌ Error during update: {e}")
         db.rollback()
         raise
     finally:
@@ -112,17 +112,17 @@ def update_null_fields_dynamic(column_mapping):
 
 
 def verify_update(column_mapping):
-    """Verificar que todos los campos fueron actualizados correctamente"""
+    """Verify that all fields were updated correctly"""
     if not column_mapping:
         return
         
     db = SessionLocal()
     try:
-        # Columnas fijas
+        # Fixed columns
         columns_to_show = ['id_problem', 'title']
-        # Añadimos las columnas dinámicas, pero entrecomilladas si tienen mayúsculas
+        # Add dynamic columns, quoted if they have uppercase letters
         for col in column_mapping.values():
-            # si el nombre difiere de la versión lowercase, lo comillamos
+            # quote if name differs from lowercase version
             if col.lower() != col:
                 columns_to_show.append(f'"{col}"')
             else:
@@ -139,13 +139,13 @@ def verify_update(column_mapping):
         result = db.execute(verify_query)
         records = result.fetchall()
         
-        print("\n📋 Muestra de registros actualizados:")
+        print("\n📋 Sample of updated records:")
         print("-" * 80)
         for record in records:
             print(f"ID: {record[0]}")
-            print(f"Título: {record[1]}")
+            print(f"Title: {record[1]}")
             
-            # Mostrar los campos actualizados
+            # Show updated fields
             idx = 2
             for field, column_name in column_mapping.items():
                 value = record[idx]
@@ -154,38 +154,38 @@ def verify_update(column_mapping):
             print("-" * 40)
             
     except Exception as e:
-        print(f"❌ Error al verificar: {e}")
+        print(f"❌ Error verifying update: {e}")
     finally:
         db.close()
 
 
 def main():
     try:
-        print("🚀 Iniciando inspección y migración de datos...")
+        print("🚀 Starting data inspection and migration...")
         
-        # Paso 1: Inspeccionar estructura
+        # Step 1: Inspect structure
         column_names = inspect_table_structure()
         if column_names is None:
             return
         
-        # Paso 2: Encontrar columnas correspondientes
+        # Step 2: Find corresponding columns
         column_mapping = find_matching_columns(column_names)
         
-        # Paso 3: Actualizar campos NULL
+        # Step 3: Update NULL fields
         update_null_fields_dynamic(column_mapping)
         
-        # Paso 4: Verificar actualización
+        # Step 4: Verify update
         verify_update(column_mapping)
         
-        print("\n✅ Migración completada exitosamente!")
-        print("\n📝 Próximos pasos:")
-        print("1. Actualiza tus esquemas de Pydantic para hacer los campos obligatorios")
-        print("2. Actualiza las rutas para usar los nombres de columna correctos")
-        print("3. Reinicia tu servidor FastAPI")
+        print("\n✅ Migration completed successfully!")
+        print("\n📝 Next steps:")
+        print("1. Update your Pydantic schemas to make the fields mandatory")
+        print("2. Update routes to use the correct column names")
+        print("3. Restart your FastAPI server")
         
     except Exception as e:
-        print(f"💥 Error crítico durante la migración: {e}")
-        print("Por favor, revisa la conexión a la base de datos y vuelve a intentar.")
+        print(f"💥 Critical error during migration: {e}")
+        print("Please check your database connection and try again.")
 
 if __name__ == "__main__":
     main()

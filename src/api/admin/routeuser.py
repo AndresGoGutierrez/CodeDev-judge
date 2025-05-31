@@ -10,9 +10,9 @@ from src.middleware.admin_middleware import is_admin
 from src.models.submissionModel import Submission
 from src.schemas import submission as submission_schemas
 
-# Configurar logging
+# Configure logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # Cambiar a DEBUG para más información
+logger.setLevel(logging.DEBUG)  # Change to DEBUG for more information
 
 router = APIRouter(prefix="/api/admin/users")
 
@@ -24,17 +24,17 @@ async def get_all_users(
     _: dict = Depends(is_admin)
 ):
     """
-    Obtener todos los usuarios.
-    Solo accesible para administradores.
+    Get all users.
+    Only accessible to administrators.
     """
     try:
-        # Obtener el token del usuario de request.state
+        # Get user token from request.state
         user_token = request.state.user_token
-        logger.debug(f"Token del usuario: {user_token[:10]}...")
+        logger.debug(f"User token: {user_token[:10]}...")
         
-        # Simular respuesta para depuración
-        # IMPORTANTE: Eliminar en producción
-        logger.debug("Simulando respuesta de usuarios para depuración")
+        # Simulate response for debugging
+        # IMPORTANT: Remove in production
+        logger.debug("Simulating user response for debugging")
         return [
             {
                 "id": "1",
@@ -59,53 +59,53 @@ async def get_all_users(
             }
         ]
         
-        # Llamar al servicio de autenticación para obtener la lista de usuarios
-        logger.debug(f"Llamando al servicio de autenticación: {settings.AUTH_SERVICE_URL}/api/admin/users")
+        # Call the authentication service to get the list of users
+        logger.debug(f"Calling authentication service: {settings.AUTH_SERVICE_URL}/api/admin/users")
         response = requests.get(
             f"{settings.AUTH_SERVICE_URL}/api/admin/users",
             headers={"Authorization": f"Bearer {user_token}", "x-access-token": user_token},
             timeout=5
         )
         
-        logger.debug(f"Respuesta del servicio de autenticación: {response.status_code}")
+        logger.debug(f"Authentication service response: {response.status_code}")
         
         if response.status_code != 200:
-            logger.error(f"Error al obtener usuarios: {response.text}")
+            logger.error(f"Error getting users: {response.text}")
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"Error al obtener usuarios: {response.text}"
+                detail=f"Error getting users: {response.text}"
             )
         
         users = response.json()
-        logger.debug(f"Usuarios recibidos: {len(users)}")
+        logger.debug(f"Users received: {len(users)}")
         
-        # Aplicar paginación
+        # Apply pagination
         paginated_users = users[skip:skip+limit]
         
         return paginated_users
     
     except requests.RequestException as e:
-        logger.error(f"Error al comunicarse con el servicio de autenticación: {str(e)}")
+        logger.error(f"Error communicating with authentication service: {str(e)}")
         raise HTTPException(
             status_code=502,
-            detail=f"Error al comunicarse con el servicio de autenticación: {str(e)}"
+            detail=f"Error communicating with authentication service: {str(e)}"
         )
 
 @router.get("/{user_id}")
 async def get_user_detail(
     request: Request,
-    user_id: str = Path(..., description="ID del usuario"),
+    user_id: str = Path(..., description="User ID"),
     _: dict = Depends(is_admin)
 ):
     """
-    Obtener detalles de un usuario específico.
-    Solo accesible para administradores.
+    Get details of a specific user.
+    Only accessible to administrators.
     """
     try:
-        # Obtener el token del usuario de request.state
+        # Get user token from request.state
         user_token = request.state.user_token
         
-        # Llamar al servicio de autenticación para obtener los detalles del usuario
+        # Call the authentication service to get user details
         response = requests.get(
             f"{settings.AUTH_SERVICE_URL}/api/admin/users/{user_id}",
             headers={"Authorization": f"Bearer {user_token}", "x-access-token": user_token},
@@ -113,12 +113,12 @@ async def get_user_detail(
         )
         
         if response.status_code == 404:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            raise HTTPException(status_code=404, detail="User not found")
         
         if response.status_code != 200:
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"Error al obtener usuario: {response.text}"
+                detail=f"Error getting user: {response.text}"
             )
         
         return response.json()
@@ -126,25 +126,25 @@ async def get_user_detail(
     except requests.RequestException as e:
         raise HTTPException(
             status_code=502,
-            detail=f"Error al comunicarse con el servicio de autenticación: {str(e)}"
+            detail=f"Error communicating with authentication service: {str(e)}"
         )
 
 @router.put("/{user_id}")
 async def update_user(
     request: Request,
     user_data: dict,
-    user_id: str = Path(..., description="ID del usuario"),
+    user_id: str = Path(..., description="User ID"),
     _: dict = Depends(is_admin)
 ):
     """
-    Actualizar información de un usuario.
-    Solo accesible para administradores.
+    Update user information.
+    Only accessible to administrators.
     """
     try:
-        # Obtener el token del usuario de request.state
+        # Get user token from request.state
         user_token = request.state.user_token
         
-        # Llamar al servicio de autenticación para actualizar el usuario
+        # Call the authentication service to update user
         response = requests.put(
             f"{settings.AUTH_SERVICE_URL}/api/admin/users/{user_id}",
             json=user_data,
@@ -153,12 +153,12 @@ async def update_user(
         )
         
         if response.status_code == 404:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            raise HTTPException(status_code=404, detail="User not found")
         
         if response.status_code != 200:
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"Error al actualizar usuario: {response.text}"
+                detail=f"Error updating user: {response.text}"
             )
         
         return response.json()
@@ -166,25 +166,25 @@ async def update_user(
     except requests.RequestException as e:
         raise HTTPException(
             status_code=502,
-            detail=f"Error al comunicarse con el servicio de autenticación: {str(e)}"
+            detail=f"Error communicating with authentication service: {str(e)}"
         )
 
 @router.patch("/{user_id}/role")
 async def change_user_role(
     request: Request,
     role_data: dict,
-    user_id: str = Path(..., description="ID del usuario"),
+    user_id: str = Path(..., description="User ID"),
     _: dict = Depends(is_admin)
 ):
     """
-    Cambiar el rol de un usuario.
-    Solo accesible para administradores.
+    Change user role.
+    Only accessible to administrators.
     """
     try:
-        # Obtener el token del usuario de request.state
+        # Get user token from request.state
         user_token = request.state.user_token
         
-        # Llamar al servicio de autenticación para cambiar el rol del usuario
+        # Call the authentication service to change user role
         response = requests.patch(
             f"{settings.AUTH_SERVICE_URL}/api/admin/users/{user_id}/role",
             json=role_data,
@@ -193,12 +193,12 @@ async def change_user_role(
         )
         
         if response.status_code == 404:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            raise HTTPException(status_code=404, detail="User not found")
         
         if response.status_code != 200:
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"Error al cambiar rol de usuario: {response.text}"
+                detail=f"Error changing user role: {response.text}"
             )
         
         return response.json()
@@ -206,25 +206,25 @@ async def change_user_role(
     except requests.RequestException as e:
         raise HTTPException(
             status_code=502,
-            detail=f"Error al comunicarse con el servicio de autenticación: {str(e)}"
+            detail=f"Error communicating with authentication service: {str(e)}"
         )
 
 @router.get("/{user_id}/submissions", response_model=List[submission_schemas.SubmissionPublic])
 async def get_user_submissions(
     request: Request,
-    user_id: str = Path(..., description="ID del usuario"),
+    user_id: str = Path(..., description="User ID"),
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     _: dict = Depends(is_admin)
 ):
     """
-    Obtener todos los envíos de un usuario específico.
-    Solo accesible para administradores.
+    Get all submissions of a specific user.
+    Only accessible to administrators.
     """
-    # Verificar que el usuario existe
+    # Verify that the user exists
     try:
-        # Obtener el token del usuario de request.state
+        # Get user token from request.state
         user_token = request.state.user_token
         
         response = requests.get(
@@ -234,21 +234,21 @@ async def get_user_submissions(
         )
         
         if response.status_code == 404:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            raise HTTPException(status_code=404, detail="User not found")
         
         if response.status_code != 200:
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"Error al verificar usuario: {response.text}"
+                detail=f"Error verifying user: {response.text}"
             )
     
     except requests.RequestException as e:
         raise HTTPException(
             status_code=502,
-            detail=f"Error al comunicarse con el servicio de autenticación: {str(e)}"
+            detail=f"Error communicating with authentication service: {str(e)}"
         )
     
-    # Obtener los envíos del usuario
+    # Get user submissions
     submissions = db.query(Submission).filter(
         Submission.user_id == user_id
     ).order_by(Submission.created_at.desc()).offset(skip).limit(limit).all()

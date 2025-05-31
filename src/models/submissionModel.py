@@ -19,9 +19,9 @@ class Submission(Base):
     memory_used = Column(Integer, nullable=True)
     judge0_token = Column(String, nullable=True)
 
-    result = Column(JSON, nullable=True)  # Añadido nullable=True para evitar errores
-    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Añadido
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)  # Añadido
+    result = Column(JSON, nullable=True)  # Added nullable=True to avoid errors
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Added
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)  # Added
 
     problem = relationship("Problem", back_populates="submissions")
     results = relationship("TestResult", back_populates="submission", cascade="all, delete-orphan")

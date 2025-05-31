@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
 
-# Cargar variables del .env usando decouple
+# Load variables from .env using decouple
 url = URL.create(
     drivername="postgresql",
     username=config("PG_USER"),
@@ -13,13 +13,13 @@ url = URL.create(
     port=config("PG_PORT", cast=int, default=5432)
 )
 
-# Crear motor de SQLAlchemy
-engine = create_engine(url, echo=True)  # echo=True muestra las consultas en consola (útil para debug)
+# Create SQLAlchemy engine
+engine = create_engine(url, echo=True)  # echo=True shows queries in the console (useful for debugging)
 
-# Crear una fábrica de sesiones
+# Create a session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Función para obtener la sesión (útil en FastAPI, Flask, etc.)
+# Function to get the session (useful in FastAPI, Flask, etc.)
 def get_db():
     db = SessionLocal()
     try:

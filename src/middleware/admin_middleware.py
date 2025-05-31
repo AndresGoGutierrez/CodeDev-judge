@@ -2,45 +2,45 @@ from fastapi import Request, HTTPException
 import logging
 import json
 
-# Configurar logging
+# Configure logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # Cambiar a DEBUG para más información
+logger.setLevel(logging.DEBUG)  # Change to DEBUG for more information
 
 async def is_admin(request: Request):
     """
-    Middleware para verificar si el usuario tiene rol de administrador.
+    Middleware to check if the user has administrator role.
     """
-    # Verificar si el usuario está autenticado
+    # Check if the user is authenticated
     if not hasattr(request.state, "user"):
-        logger.warning("Usuario no autenticado intentando acceder a ruta de administrador")
-        raise HTTPException(status_code=401, detail="No autenticado")
+        logger.warning("Unauthenticated user trying to access admin route")
+        raise HTTPException(status_code=401, detail="Not authenticated")
     
     user = request.state.user
-    logger.debug(f"Verificando permisos de administrador para usuario: {json.dumps(user) if isinstance(user, dict) else str(user)}")
+    logger.debug(f"Checking admin permissions for user: {json.dumps(user) if isinstance(user, dict) else str(user)}")
     
-    # Verificar si el usuario tiene rol de administrador
+    # Check if the user has administrator role
     is_admin_user = False
     
-    # Verificar diferentes estructuras posibles de roles
+    # Check different possible role structures
     if isinstance(user, dict):
         if "roles" in user and isinstance(user["roles"], list):
-            logger.debug(f"Roles del usuario: {user['roles']}")
+            logger.debug(f"User roles: {user['roles']}")
             is_admin_user = "admin" in user["roles"]
         elif "role" in user and user["role"] == "admin":
-            logger.debug(f"Rol del usuario: {user['role']}")
+            logger.debug(f"User role: {user['role']}")
             is_admin_user = True
         elif "isAdmin" in user and user["isAdmin"]:
-            logger.debug(f"isAdmin del usuario: {user['isAdmin']}")
+            logger.debug(f"User isAdmin: {user['isAdmin']}")
             is_admin_user = True
     
-    # Forzar acceso de administrador para depuración
-    # IMPORTANTE: Eliminar esta línea en producción
+    # Force admin access for debugging
+    # IMPORTANT: Remove this line in production
     is_admin_user = True
-    logger.debug(f"Forzando acceso de administrador para depuración")
+    logger.debug(f"Forcing admin access for debugging")
     
     if not is_admin_user:
-        logger.warning(f"Usuario sin permisos de administrador: {user}")
-        raise HTTPException(status_code=403, detail="No tienes permisos de administrador")
+        logger.warning(f"User without admin permissions: {user}")
+        raise HTTPException(status_code=403, detail="You do not have admin permissions")
     
-    logger.debug(f"Usuario con permisos de administrador: {user}")
+    logger.debug(f"User with admin permissions: {user}")
     return user
