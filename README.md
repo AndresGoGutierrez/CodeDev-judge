@@ -194,3 +194,39 @@ for i in range(n):
             regions += 1
 
 print(regions)
+
+
+Ejercicio Contar vocales en una cadena:
+
+Solucion python:
+
+s = input().strip()
+vocales = {'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U', 
+           'á', 'é', 'í', 'ó', 'ú', 'Á', 'É', 'Í', 'Ó', 'Ú'}
+count = 0
+
+for char in s:
+    if char in vocales:
+        count += 1
+
+print(count)
+
+solucion rust:
+
+use std::io::{self, BufRead};
+
+fn main() {
+    let stdin = io::stdin();
+    let input = stdin.lock().lines().next().unwrap().unwrap();
+
+    let vocales = ['a', 'e', 'i', 'o', 'u', 
+                   'A', 'E', 'I', 'O', 'U',
+                   'á', 'é', 'í', 'ó', 'ú', 
+                   'Á', 'É', 'Í', 'Ó', 'Ú'];
+
+    let count = input.chars()
+        .filter(|c| vocales.contains(c))
+        .count();
+
+    println!("{}", count);
+}
