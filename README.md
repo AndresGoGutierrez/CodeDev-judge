@@ -69,7 +69,7 @@ CodeDev/
 
 <div align="center"> 
  <a href="https://youtu.be/EbccvGG35hM" target="_blank"> 
-    <img src="https://i.ibb.co/N2qhk00f/image.png" alt="CodeDev Preview" width="700" style="border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"> 
+    <img src="https://i.ibb.co/yF616M62/project-Code-Dev.webp" alt="CodeDev Preview" width="700" style="border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"> 
   </a>
 </div>
 
